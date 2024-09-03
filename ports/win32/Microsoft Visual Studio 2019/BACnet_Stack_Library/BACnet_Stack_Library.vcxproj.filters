@@ -177,9 +177,6 @@
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\filename.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\key.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\keylist.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -202,6 +199,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\src\bacnet\authentication_factor.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\src\bacnet\datalink\cobs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
