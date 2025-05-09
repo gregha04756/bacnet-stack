@@ -111,6 +111,9 @@
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\color_temperature.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\src\bacnet\basic\object\netport.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\src\bacnet\basic\object\ai.h">

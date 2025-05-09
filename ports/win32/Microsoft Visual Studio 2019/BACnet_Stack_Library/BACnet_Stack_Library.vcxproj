@@ -91,7 +91,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <AdditionalIncludeDirectories>..\..\..\..\ports\win32;..\..\..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>BACNET_STACK_STATIC_DEFINE;BACAPP_ALL;WIN32;_DEBUG;_CONSOLE;PRINT_ENABLED=1;BIP_DEBUG;INTRINSIC_REPORTING=1;BBMD_ENABLED=1;DEBUG_ENABLED=1;BACFILE;_MBCS;BACNET_PROPERTY_ARRAY_LISTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BACNET_STACK_STATIC_DEFINE;BACAPP_ALL;WIN32;_DEBUG;_CONSOLE;PRINT_ENABLED=1;BIP_DEBUG;INTRINSIC_REPORTING=1;BBMD_ENABLED=1;DEBUG_ENABLED=1;BACFILE;_MBCS;BACNET_PROPERTY_ARRAY_LISTS;BACDL_MSTP=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
@@ -191,6 +191,7 @@
     <ClCompile Include="..\..\..\..\src\bacnet\cov.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\datalink\crc.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\datalink\datalink.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\datalink\dlmstp.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\datetime.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\dcc.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\debug.c" />
@@ -231,6 +232,8 @@
     <ClCompile Include="..\..\..\..\src\bacnet\whois.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\wp.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\wpm.c" />
+    <ClCompile Include="..\..\..\..\test\bacnet\basic\object\test\datetime_local.c" />
+    <ClCompile Include="..\..\..\..\test\bacnet\datalink\mock\src\dlmstp-mock.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\src\bacnet\abort.h" />
