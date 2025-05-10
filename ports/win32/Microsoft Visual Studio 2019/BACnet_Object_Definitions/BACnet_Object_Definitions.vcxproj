@@ -180,10 +180,14 @@
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\av.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\bacfile.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\bi.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\basic\object\bitstring_value.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\basic\object\blo.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\bo.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\bv.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\calendar.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\channel.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\basic\object\color_object.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\basic\object\color_temperature.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\command.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\csv.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\gateway\gw_device.c" />
@@ -191,6 +195,7 @@
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\lc.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\lo.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\lsp.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\basic\object\lsz.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\ms-input.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\mso.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\msv.c" />

@@ -91,7 +91,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <AdditionalIncludeDirectories>..\..\..\..\ports\win32;..\..\..\..\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>BACNET_STACK_STATIC_DEFINE;BACAPP_ALL;WIN32;_DEBUG;_CONSOLE;PRINT_ENABLED=1;BIP_DEBUG;INTRINSIC_REPORTING=1;BBMD_ENABLED=1;DEBUG_ENABLED=1;BACFILE;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BACNET_STACK_STATIC_DEFINE;BACAPP_ALL;WIN32;_DEBUG;_CONSOLE;PRINT_ENABLED=1;BIP_DEBUG;INTRINSIC_REPORTING=1;BBMD_ENABLED=1;DEBUG_ENABLED=1;BACFILE;_MBCS;BACNET_PROPERTY_ARRAY_LISTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
@@ -163,6 +163,7 @@
     <ClCompile Include="..\..\..\..\ports\win32\bip-init.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\abort.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\authentication_factor.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\bacdest.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\binding\address.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\alarm_ack.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\service\h_apdu.c" />
@@ -182,6 +183,10 @@
     <ClCompile Include="..\..\..\..\src\bacnet\bactimevalue.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\bigend.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\days.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\linear.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\calendar_entry.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\create_object.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\dailyschedule.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\datalink\bvlc.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\cov.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\datalink\crc.c" />
@@ -189,6 +194,7 @@
     <ClCompile Include="..\..\..\..\src\bacnet\datetime.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\dcc.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\debug.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\delete_object.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\event.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\fifo.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\filename.c" />
@@ -206,6 +212,7 @@
     <ClCompile Include="..\..\..\..\src\bacnet\datalink\mstp.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\datalink\mstptext.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\npdu.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\property.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\proplist.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\ptransfer.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\rd.c" />
@@ -215,9 +222,11 @@
     <ClCompile Include="..\..\..\..\src\bacnet\rp.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\rpm.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\sbuf.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\special_event.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\timestamp.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\timesync.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\tsm\tsm.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\weeklyschedule.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\whohas.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\whois.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\wp.c" />
@@ -283,6 +292,7 @@
     <ClInclude Include="..\..\..\..\src\bacnet\mydata.h" />
     <ClInclude Include="..\..\..\..\src\bacnet\npdu.h" />
     <ClInclude Include="..\..\..\..\src\bacnet\objects.h" />
+    <ClInclude Include="..\..\..\..\src\bacnet\property.h" />
     <ClInclude Include="..\..\..\..\src\bacnet\proplist.h" />
     <ClInclude Include="..\..\..\..\src\bacnet\ptransfer.h" />
     <ClInclude Include="..\..\..\..\src\bacnet\rd.h" />
