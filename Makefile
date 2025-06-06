@@ -24,13 +24,17 @@ mingw32:
 	ORIGINAL_LD=$(LD) ; \
 	export CC=i686-w64-mingw32-gcc ; \
 	export LD=i686-w64-mingw32-ld ; \
-	$(MAKE) BACNET_PORT=win32 -s -C apps all ; \
+	$(MAKE) BACNET_PORT=win32 LEGACY=true -s -C apps all ; \
 	export CC=$(ORIGINAL_CC) ; \
 	export LD=$(ORIGINAL_LD)
 
+.PHONY: mstpwin32-clean
+mstpwin32-clean:
+	$(MAKE) LEGACY=true BACDL=mstp BACNET_PORT=win32 -s -C apps clean
+
 .PHONY: mstpwin32
 mstpwin32:
-	$(MAKE) BACDL=mstp BACNET_PORT=win32 -s -C apps all
+	$(MAKE) LEGACY=true BACDL=mstp BACNET_PORT=win32 -s -C apps all
 
 .PHONY: mstp
 mstp:
@@ -56,13 +60,23 @@ bip-client:
 ethernet:
 	$(MAKE) BACDL=ethernet -s -C apps all
 
+# note: requires additional libraries to be installed
+# see .github/workflows/gcc.yml
+.PHONY: bsc
+bsc:
+	$(MAKE) BACDL=bsc -s -C apps all
+
 .PHONY: apps
 apps:
-	$(MAKE) -s -C apps all
+	$(MAKE) -s LEGACY=true -C apps all
 
 .PHONY: lib
 lib:
-	$(MAKE) -s -C apps $@
+	$(MAKE) -s LEGACY=true -C apps $@
+
+.PHONY: library
+library:
+	$(MAKE) -s LEGACY=true -C apps lib
 
 CMAKE_BUILD_DIR=build
 .PHONY: cmake
@@ -94,7 +108,19 @@ apdu:
 
 .PHONY: blinkt
 blinkt:
-	$(MAKE) -s -C apps $@
+	$(MAKE) LEGACY=true -C apps $@
+
+.PHONY: blinkt-pipeline
+blinkt-pipeline:
+	$(MAKE) LEGACY=true BUILD=pipeline -C apps blinkt
+
+.PHONY: blinkt6
+blinkt6:
+	$(MAKE) LEGACY=true BACDL=bip6 -C apps blinkt
+
+.PHONY: blinkt6-pipeline
+blinkt6-pipeline:
+	$(MAKE) LEGACY=true BACDL=bip6 BUILD=pipeline -C apps blinkt
 
 .PHONY: create-object
 create-object:
@@ -140,6 +166,10 @@ gateway-win32:
 piface:
 	$(MAKE) CSTANDARD="-std=gnu11" LEGACY=true -s -C apps $@
 
+.PHONY: piface6
+piface6:
+	$(MAKE) CSTANDARD="-std=gnu11" BACDL=bip6 LEGACY=true -s -C apps piface
+
 .PHONY: readbdt
 readbdt:
 	$(MAKE) -s -C apps $@
@@ -176,6 +206,10 @@ netnumis:
 server:
 	$(MAKE) -s -C apps $@
 
+.PHONY: server-basic
+server-basic:
+	$(MAKE) LEGACY=true NOTIFY=false -s -C apps $@
+
 .PHONY: server-client
 server-client:
 	$(MAKE) LEGACY=true -s -C apps $@
@@ -183,6 +217,14 @@ server-client:
 .PHONY: server-discover
 server-discover:
 	$(MAKE) LEGACY=true -s -C apps $@
+
+.PHONY: server-mini
+server-mini:
+	$(MAKE) LEGACY=true NOTIFY=false -s -C apps $@
+
+.PHONY: sc-hub
+sc-hub:
+	$(MAKE) BACDL=bsc -s -C apps $@
 
 .PHONY: mstpcap
 mstpcap:
@@ -202,6 +244,10 @@ whois:
 
 .PHONY: writepropm
 writepropm:
+	$(MAKE) -s -C apps $@
+
+.PHONY: writegroup
+writegroup:
 	$(MAKE) -s -C apps $@
 
 .PHONY: router
@@ -242,20 +288,20 @@ fuzz-afl:
 
 # Add "ports" to the build, if desired
 .PHONY: ports
-ports:	atmega168 bdk-atxx4-mstp at91sam7s stm32f10x stm32f4xx
+ports:	atmega328 bdk-atxx4-mstp at91sam7s stm32f10x stm32f4xx
 	@echo "Built the ARM7 and AVR ports"
 
 .PHONY: ports-clean
-ports-clean: atmega168-clean bdk-atxx4-mstp-clean at91sam7s-clean \
+ports-clean: atmega328-clean bdk-atxx4-mstp-clean at91sam7s-clean \
 	stm32f10x-clean stm32f4xx-clean xplained-clean
 
-.PHONY: atmega168
-atmega168: ports/atmega168/Makefile
-	$(MAKE) -s -C ports/atmega168 clean all
+.PHONY: atmega328
+atmega328: ports/atmega328/Makefile
+	$(MAKE) -s -C ports/atmega328 clean all
 
-.PHONY: atmega168-clean
-atmega168-clean: ports/atmega168/Makefile
-	$(MAKE) -s -C ports/atmega168 clean
+.PHONY: atmega328-clean
+atmega328-clean: ports/atmega328/Makefile
+	$(MAKE) -s -C ports/atmega328 clean
 
 .PHONY: bdk-atxx4-mstp
 bdk-atxx4-mstp: ports/bdk-atxx4-mstp/Makefile
@@ -365,11 +411,31 @@ SPLINT_FIND_OPTIONS := ./src -path ./src/bacnet/basic/ucix -prune -o -name "*.c"
 splint:
 	find $(SPLINT_FIND_OPTIONS) -exec splint $(SPLINT_OPTIONS) {} \;
 
-CPPCHECK_OPTIONS = --enable=warning,portability
+CPPCHECK_OPTIONS = --enable=warning,portability,style
 CPPCHECK_OPTIONS += --template=gcc
 CPPCHECK_OPTIONS += --inline-suppr
+CPPCHECK_OPTIONS += --inconclusive
 CPPCHECK_OPTIONS += --suppress=selfAssignment
 CPPCHECK_OPTIONS += --suppress=integerOverflow
+CPPCHECK_OPTIONS += --suppress=variableScope
+CPPCHECK_OPTIONS += --suppress=unreadVariable
+CPPCHECK_OPTIONS += --suppress=knownConditionTrueFalse
+CPPCHECK_OPTIONS += --suppress=constParameter
+CPPCHECK_OPTIONS += --suppress=redundantAssignment
+CPPCHECK_OPTIONS += --suppress=duplicateCondition
+CPPCHECK_OPTIONS += --suppress=funcArgNamesDifferent
+CPPCHECK_OPTIONS += --suppress=unusedStructMember
+CPPCHECK_OPTIONS += --suppress=uselessAssignmentPtrArg
+CPPCHECK_OPTIONS += --suppress=cert-MSC30-c
+CPPCHECK_OPTIONS += --suppress=cert-STR05-C
+CPPCHECK_OPTIONS += --suppress=cert-API01-C
+CPPCHECK_OPTIONS += --suppress=cert-MSC24-C
+CPPCHECK_OPTIONS += --suppress=cert-INT31-c
+# new in cppcheck 2.13
+CPPCHECK_OPTIONS += --suppress=constParameterCallback
+CPPCHECK_OPTIONS += --suppress=constParameterPointer
+CPPCHECK_OPTIONS += --suppress=constVariablePointer
+# suppress the deprecated warning for the BACnet stack
 CPPCHECK_OPTIONS += -DBACNET_STACK_DEPRECATED
 #CPPCHECK_OPTIONS += -I./src
 #CPPCHECK_OPTIONS += --enable=information --check-config
@@ -428,6 +494,11 @@ complexity:
 sloccount:
 	sloccount .
 
+# sudo apt install doxygen
+.PHONY: doxygen
+doxygen:
+	doxygen BACnet-stack.doxyfile
+
 .PHONY: clean
 clean: ports-clean
 	$(MAKE) -s -C src clean
@@ -436,6 +507,7 @@ clean: ports-clean
 	$(MAKE) -s -C apps/router-ipv6 clean
 	$(MAKE) -s -C apps/router-mstp clean
 	$(MAKE) -s -C apps/gateway clean
+	$(MAKE) -s -C apps/sc-hub clean
 	$(MAKE) -s -C apps/fuzz-afl clean
 	$(MAKE) -s -C apps/fuzz-libfuzzer clean
 	$(MAKE) -s -C ports/lwip clean
@@ -450,6 +522,11 @@ test:
 .PHONY: retest
 retest:
 	$(MAKE) -s -j -C test retest
+
+.PHONY: test-bsc
+test-bsc:
+	$(MAKE) -s -C test clean
+	$(MAKE) -s -j -C test test-bsc
 
 # Zephyr unit testing with twister
 # expects zephyr to be installed in ../zephyr in Workspace

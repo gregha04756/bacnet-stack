@@ -31,8 +31,8 @@ static struct mstimer WhoIs_Timer;
 static struct mstimer Read_Write_Timer;
 /* list of devices */
 static OS_Keylist Device_List = NULL;
-/* discovery destination network */
-static uint16_t Target_DNET = 0;
+/* discovery destination */
+static BACNET_ADDRESS Target_DEST = { 0 };
 /* re-discovery time */
 static unsigned long Discovery_Milliseconds;
 /* states of discovery */
@@ -467,16 +467,16 @@ bool bacnet_discover_property_name(
             device_id, object_type, object_instance, object_property, &value);
         if (status && value.tag == BACNET_APPLICATION_TAG_CHARACTER_STRING) {
             if (characterstring_valid(&value.type.Character_String)) {
-                strncpy(
-                    buffer, characterstring_value(&value.type.Character_String),
-                    buffer_len - 1);
+                snprintf(
+                    buffer, buffer_len, "%s",
+                    characterstring_value(&value.type.Character_String));
             } else {
                 status = false;
             }
         }
     }
     if (!status) {
-        strncpy(buffer, default_string, buffer_len);
+        snprintf(buffer, buffer_len, "%s", default_string);
     }
 
     return status;
@@ -610,8 +610,8 @@ static void bacnet_device_object_property_add(
             device_data->Object_List, rp_data->object_type,
             rp_data->object_instance);
         if (!object_data) {
-            debug_perror(
-                "%s-%u object fail to add!\n",
+            debug_fprintf(
+                stderr, "%s-%u object fail to add!\n",
                 bactext_object_type_name(rp_data->object_type),
                 rp_data->object_instance);
             return;
@@ -619,8 +619,8 @@ static void bacnet_device_object_property_add(
         property_data = bacnet_property_data_add(
             object_data->Property_List, rp_data->object_property);
         if (!property_data) {
-            debug_perror(
-                "%s-%u %s property fail to add!\n",
+            debug_fprintf(
+                stderr, "%s-%u %s property fail to add!\n",
                 bactext_object_type_name(rp_data->object_type),
                 rp_data->object_instance,
                 bactext_property_name(rp_data->object_property));
@@ -640,8 +640,8 @@ static void bacnet_device_object_property_add(
                     property_data->application_data, rp_data->application_data,
                     rp_data->application_data_len);
             } else {
-                debug_perror(
-                    "%s-%u %s property fail to allocate!\n",
+                debug_fprintf(
+                    stderr, "%s-%u %s property fail to allocate!\n",
                     bactext_object_type_name(rp_data->object_type),
                     rp_data->object_instance,
                     bactext_property_name(rp_data->object_property));
@@ -677,16 +677,20 @@ static void bacnet_device_object_property_add(
 /**
  * @brief Handle the error from a ReadProperty or ReadPropertyMultiple
  * @param device_id - device instance number where data originated
- * @param error_code - BACnet Error code
+ * @param rp_data - ReadProperty data structure
+ * @param device_data - Pointer to the device data structure
  */
 static void Device_Error_Handler(
     uint32_t device_id,
-    BACNET_ERROR_CODE error_code,
+    BACNET_READ_PROPERTY_DATA *rp_data,
     BACNET_DEVICE_DATA *device_data)
 {
+    bool status = false;
+
     if (device_data) {
         debug_printf(
-            "%u - %s\n", device_id, bactext_error_code_name((int)error_code));
+            "%u - %s\n", device_id,
+            bactext_error_code_name((int)rp_data->error_code));
         switch (device_data->Discovery_State) {
             case BACNET_DISCOVER_STATE_OBJECT_LIST_REQUEST:
                 /* resend request */
@@ -697,12 +701,38 @@ static void Device_Error_Handler(
                     BACNET_DISCOVER_STATE_OBJECT_LIST_RESPONSE;
                 break;
             case BACNET_DISCOVER_STATE_OBJECT_GET_PROPERTY_REQUEST:
-                /* resend request */
-                if (device_data->Object_List_Index != 0) {
-                    device_data->Object_List_Index--;
+                if (rp_data->error_code == ERROR_CODE_TIMEOUT) {
+                    /* resend request */
+                    if (device_data->Object_List_Index != 0) {
+                        device_data->Object_List_Index--;
+                    }
+                    device_data->Discovery_State =
+                        BACNET_DISCOVER_STATE_OBJECT_GET_PROPERTY_RESPONSE;
+                } else if (
+                    (rp_data->error_code ==
+                     ERROR_CODE_ABORT_SEGMENTATION_NOT_SUPPORTED) &&
+                    (rp_data->object_property == PROP_ALL)) {
+                    /* fallback to ReadProperty required properties */
+                    /* FIXME: fill a property-list with properties
+                       and use FSM to ReadProperty of each.
+                       For now, read the object-name property */
+                    status = bacnet_read_property_queue(
+                        device_id, rp_data->object_type,
+                        rp_data->object_instance, PROP_OBJECT_NAME,
+                        BACNET_ARRAY_ALL);
+                    if (status) {
+                        device_data->Discovery_State =
+                            BACNET_DISCOVER_STATE_OBJECT_GET_PROPERTY_REQUEST;
+                    } else {
+                        /* skip */
+                        device_data->Discovery_State =
+                            BACNET_DISCOVER_STATE_OBJECT_GET_PROPERTY_RESPONSE;
+                    }
+                } else {
+                    /* skip */
+                    device_data->Discovery_State =
+                        BACNET_DISCOVER_STATE_OBJECT_GET_PROPERTY_RESPONSE;
                 }
-                device_data->Discovery_State =
-                    BACNET_DISCOVER_STATE_OBJECT_GET_PROPERTY_RESPONSE;
                 break;
             default:
                 break;
@@ -733,7 +763,7 @@ static void bacnet_read_property_reply(
         return;
     }
     if (rp_data->error_code != ERROR_CODE_SUCCESS) {
-        Device_Error_Handler(device_id, rp_data->error_code, device_data);
+        Device_Error_Handler(device_id, rp_data, device_data);
     } else if (value) {
         bacnet_device_object_property_add(
             device_id, rp_data, value, device_data);
@@ -764,7 +794,8 @@ bacnet_discover_device_fsm(uint32_t device_id, BACNET_DEVICE_DATA *device_data)
                 device_data->Discovery_State =
                     BACNET_DISCOVER_STATE_OBJECT_LIST_SIZE_REQUEST;
             } else {
-                debug_perror("%u object-list-size fail to queue!\n", device_id);
+                debug_fprintf(
+                    stderr, "%u object-list-size fail to queue!\n", device_id);
             }
             break;
         case BACNET_DISCOVER_STATE_OBJECT_LIST_SIZE_REQUEST:
@@ -794,9 +825,9 @@ bacnet_discover_device_fsm(uint32_t device_id, BACNET_DEVICE_DATA *device_data)
                         BACNET_DISCOVER_STATE_OBJECT_LIST_REQUEST;
                     return;
                 } else {
-                    debug_perror(
-                        "%u object-list[%u] %s-%u fail to queue!\n", device_id,
-                        device_data->Object_List_Index,
+                    debug_fprintf(
+                        stderr, "%u object-list[%u] %s-%u fail to queue!\n",
+                        device_id, device_data->Object_List_Index,
                         bactext_object_type_name(object_type),
                         (unsigned)object_instance);
                     device_data->Object_List_Index--;
@@ -832,9 +863,9 @@ bacnet_discover_device_fsm(uint32_t device_id, BACNET_DEVICE_DATA *device_data)
                         BACNET_DISCOVER_STATE_OBJECT_GET_PROPERTY_REQUEST;
                     device_data->Object_List_Index++;
                 } else {
-                    debug_perror(
-                        "%u object-list[%u] %s-%u fail to queue!\n", device_id,
-                        device_data->Object_List_Index,
+                    debug_fprintf(
+                        stderr, "%u object-list[%u] %s-%u fail to queue!\n",
+                        device_id, device_data->Object_List_Index,
                         bactext_object_type_name(object_type),
                         (unsigned)object_instance);
                 }
@@ -856,8 +887,8 @@ bacnet_discover_device_fsm(uint32_t device_id, BACNET_DEVICE_DATA *device_data)
             }
             break;
         default:
-            debug_perror(
-                "%u unknown state %u!\n", device_id,
+            debug_fprintf(
+                stderr, "%u unknown state %u!\n", device_id,
                 device_data->Discovery_State);
             break;
     }
@@ -881,7 +912,7 @@ static void bacnet_discover_devices_task(void)
     for (device_index = 0; device_index < device_count; device_index++) {
         device_data = Keylist_Data_Index(Device_List, device_index);
         if (!device_data) {
-            debug_perror("device[%u] is NULL!\n", device_index);
+            debug_fprintf(stderr, "device[%u] is NULL!\n", device_index);
             continue;
         }
         if (Keylist_Index_Key(Device_List, device_index, &key)) {
@@ -1043,16 +1074,12 @@ bool bacnet_discover_device_iterate(
 
 /**
  * @brief Non-blocking task for running BACnet client tasks
- * @param dest - BACnet address of the destination discovery
  */
 void bacnet_discover_task(void)
 {
-    BACNET_ADDRESS dest = { 0 };
-
     if (mstimer_expired(&WhoIs_Timer)) {
         mstimer_restart(&WhoIs_Timer);
-        dest.net = Target_DNET;
-        Send_WhoIs_To_Network(&dest, -1, -1);
+        Send_WhoIs_To_Network(&Target_DEST, -1, -1);
     }
     if (mstimer_expired(&Read_Write_Timer)) {
         mstimer_restart(&Read_Write_Timer);
@@ -1064,21 +1091,39 @@ void bacnet_discover_task(void)
 }
 
 /**
- * @brief Set the BACnet time between discovery in seconds
- * @param seconds - number of seconds between discovery intervals
+ * @brief Set the BACnet network number for directed requests
+ * @param dnet - BACnet network number
  */
 void bacnet_discover_dnet_set(uint16_t dnet)
 {
-    Target_DNET = dnet;
+    Target_DEST.net = dnet;
 }
 
 /**
- * @brief Get the BACnet time between discovery in seconds
- * @return number of seconds between discovery intervals
+ * @brief Get the BACnet network number
+ * @return BACnet network number
  */
 uint16_t bacnet_discover_dnet(void)
 {
-    return Target_DNET;
+    return Target_DEST.net;
+}
+
+/**
+ * @brief Set the BACnet address of target for directed requests
+ * @param dest - BACnet address
+ */
+void bacnet_discover_dest_set(const BACNET_ADDRESS *dest)
+{
+    bacnet_address_copy(&Target_DEST, dest);
+}
+
+/**
+ * @brief Get the the BACnet address of target
+ * @return BACnet address
+ */
+const BACNET_ADDRESS *bacnet_discover_dest(void)
+{
+    return &Target_DEST;
 }
 
 /**
@@ -1107,7 +1152,7 @@ uint16_t bacnet_discover_vendor_id(void)
  */
 void bacnet_discover_seconds_set(unsigned int seconds)
 {
-    Discovery_Milliseconds = seconds * 1000;
+    Discovery_Milliseconds = (unsigned long)seconds * 1000UL;
 }
 
 /**
@@ -1116,7 +1161,7 @@ void bacnet_discover_seconds_set(unsigned int seconds)
  */
 unsigned int bacnet_discover_seconds(void)
 {
-    return Discovery_Milliseconds = 1000;
+    return Discovery_Milliseconds = 1000UL;
 }
 
 /**

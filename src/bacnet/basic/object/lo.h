@@ -15,15 +15,7 @@
 #include "bacnet/bacerror.h"
 #include "bacnet/rp.h"
 #include "bacnet/wp.h"
-
-/**
- * @brief Callback for write present value request
- * @param  object_instance - object-instance number of the object
- * @param  old_value - value prior to write
- * @param  value - value of the write
- */
-typedef void (*lighting_output_write_present_value_callback)(
-    uint32_t object_instance, float old_value, float value);
+#include "bacnet/basic/sys/lighting_command.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,6 +106,12 @@ bool Lighting_Output_Blink_Warn_Enable(uint32_t object_instance);
 BACNET_STACK_EXPORT
 bool Lighting_Output_Blink_Warn_Enable_Set(
     uint32_t object_instance, bool enable);
+BACNET_STACK_EXPORT
+bool Lighting_Output_Blink_Warn_Feature_Set(
+    uint32_t object_instance,
+    float off_value,
+    uint16_t interval,
+    uint16_t count);
 
 BACNET_STACK_EXPORT
 uint32_t Lighting_Output_Egress_Time(uint32_t object_instance);
@@ -177,7 +175,7 @@ void Lighting_Output_Timer(uint32_t object_instance, uint16_t milliseconds);
 
 BACNET_STACK_EXPORT
 void Lighting_Output_Write_Present_Value_Callback_Set(
-    lighting_output_write_present_value_callback cb);
+    lighting_command_tracking_value_callback cb);
 
 BACNET_STACK_EXPORT
 uint32_t Lighting_Output_Create(uint32_t object_instance);

@@ -22,6 +22,8 @@ uint8_t test_packet[] = { 0x81, 0x0a, 0x00, 0x16, /* BVLC header */
                           0x00, 0x02, 0x19, 0x55 }; /* APDU */
 #endif
 
+/* BUG with optimize Os */
+/* *** bit out of range 0 - FD_SETSIZE on fd_set ***: terminated */
 void *dl_ip_thread(void *pArgs)
 {
     MSGBOX_ID msgboxid;
@@ -174,9 +176,11 @@ bool dl_ip_init(ROUTER_PORT *port, IP_DATA *ip_data)
 
     /* bind the socket to the local port number */
     sin.sin_family = AF_INET;
-    /*    sin.sin_addr.s_addr, ip_data->local_addr.s_addr;// =
-     * htonl(INADDR_ANY); */
+#if defined(BACNET_IP_BROADCAST_USE_INADDR_ANY)
     sin.sin_addr.s_addr = htonl(INADDR_ANY);
+#else
+    sin.sin_addr.s_addr = ip_data->local_addr.s_addr;
+#endif
     sin.sin_port = ip_data->port;
 
     status = bind(
@@ -219,7 +223,12 @@ int dl_ip_send(
 
     data->buff[0] = BVLL_TYPE_BACNET_IP;
     bip_dest.sin_family = AF_INET;
-    if (dest->net == BACNET_BROADCAST_NETWORK) {
+    /* note: this application only sets
+        dest->mac_len
+        dest->mac
+        dest->net
+        all other dest fields are set to zero and ignored */
+    if ((dest->net == BACNET_BROADCAST_NETWORK) || (dest->mac_len == 0)) {
         /* broadcast */
         bip_dest.sin_addr.s_addr = data->broadcast_addr.s_addr;
         bip_dest.sin_port = data->port;
@@ -232,7 +241,6 @@ int dl_ip_send(
         /* invalid address */
         return -1;
     }
-
     buff_len = 2;
     buff_len += encode_unsigned16(
         &data->buff[buff_len], (uint16_t)(pdu_len + 4 /*inclusive */));
@@ -258,7 +266,7 @@ int dl_ip_recv(
     struct timeval select_timeout;
     struct sockaddr_in sin = { 0 };
     socklen_t sin_len = sizeof(sin);
-
+    int ret;
     /* make sure the socket is open */
     if (data->socket < 0) {
         return 0;
@@ -282,7 +290,7 @@ int dl_ip_recv(
     sin.sin_addr.s_addr = 0x7E1D40A;
     sin.sin_port = 0xC0BA;
 #else
-    int ret = select(data->socket + 1, &read_fds, NULL, NULL, &select_timeout);
+    ret = select(data->socket + 1, &read_fds, NULL, NULL, &select_timeout);
     /* see if there is a packet for us */
     if (ret > 0) {
         received_bytes = recvfrom(

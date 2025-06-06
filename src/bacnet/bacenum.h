@@ -568,6 +568,8 @@ typedef enum {
     PROP_HIGH_END_TRIM = 4194335,
     PROP_LOW_END_TRIM = 4194336,
     PROP_TRIM_FADE_TIME = 4194337,
+    /* update this value which is used in testing */
+    PROP_RESERVED_RANGE_LAST = 4194337,
     /* Enumerated values 4194303-16777215 are reserved
        for definition by ASHRAE.  */
     /* do the max range inside of enum so that
@@ -1086,36 +1088,37 @@ typedef enum {
     MAX_POLARITY = 2
 } BACNET_POLARITY;
 
-typedef enum {
+typedef enum BACnetProgramRequest {
     PROGRAM_REQUEST_READY = 0,
     PROGRAM_REQUEST_LOAD = 1,
     PROGRAM_REQUEST_RUN = 2,
     PROGRAM_REQUEST_HALT = 3,
     PROGRAM_REQUEST_RESTART = 4,
-    PROGRAM_REQUEST_UNLOAD = 5
+    PROGRAM_REQUEST_UNLOAD = 5,
+    PROGRAM_REQUEST_MAX = 6
 } BACNET_PROGRAM_REQUEST;
 
-typedef enum {
+typedef enum BACnetProgramState {
     PROGRAM_STATE_IDLE = 0,
     PROGRAM_STATE_LOADING = 1,
     PROGRAM_STATE_RUNNING = 2,
     PROGRAM_STATE_WAITING = 3,
     PROGRAM_STATE_HALTED = 4,
-    PROGRAM_STATE_UNLOADING = 5
+    PROGRAM_STATE_UNLOADING = 5,
+    PROGRAM_STATE_MAX = 6
 } BACNET_PROGRAM_STATE;
 
-typedef enum {
+typedef enum BACnetProgramError {
     PROGRAM_ERROR_NORMAL = 0,
     PROGRAM_ERROR_LOAD_FAILED = 1,
     PROGRAM_ERROR_INTERNAL = 2,
     PROGRAM_ERROR_PROGRAM = 3,
     PROGRAM_ERROR_OTHER = 4,
-    /* Enumerated values 0-63 are reserved for definition by ASHRAE.  */
-    /* Enumerated values 64-65535 may be used by others subject to  */
-    /* the procedures and constraints described in Clause 23. */
-    /* do the max range inside of enum so that
-       compilers will allocate adequate sized datatype for enum
-       which is used to store decoding */
+    PROGRAM_ERROR_RESERVED_MIN = 5,
+    PROGRAM_ERROR_RESERVED_MAX = 63,
+    /* Enumerated values 0-63 are reserved for definition by ASHRAE.
+       Enumerated values 64-65535 may be used by others subject
+       to the procedures and constraints described in Clause 23. */
     PROGRAM_ERROR_PROPRIETARY_MIN = 64,
     PROGRAM_ERROR_PROPRIETARY_MAX = 65535
 } BACNET_PROGRAM_ERROR;
@@ -1599,6 +1602,14 @@ typedef enum {
     BACNET_APPLICATION_TAG_XY_COLOR,
     /* BACnetColorCommand */
     BACNET_APPLICATION_TAG_COLOR_COMMAND,
+    /* BACNET_SC_FAILED_CONNECTION_REQUEST */
+    BACNET_APPLICATION_TAG_SC_FAILED_CONNECTION_REQUEST,
+    /* BACNET_SC_HUB_FUNCTION_CONNECTION_STATUS */
+    BACNET_APPLICATION_TAG_SC_HUB_FUNCTION_CONNECTION_STATUS,
+    /* BACNET_SC_DIRECT_CONNECTION_STATUS */
+    BACNET_APPLICATION_TAG_SC_DIRECT_CONNECTION_STATUS,
+    /* BACNET_SC_HUB_CONNECTION_STATUS */
+    BACNET_APPLICATION_TAG_SC_HUB_CONNECTION_STATUS,
     /* BACnetBDTEntry */
     BACNET_APPLICATION_TAG_BDT_ENTRY,
     /* BACnetFDTEntry */
@@ -1608,7 +1619,13 @@ typedef enum {
     /* BACnetScale */
     BACNET_APPLICATION_TAG_SCALE,
     /* BACnetShedLevel */
-    BACNET_APPLICATION_TAG_SHED_LEVEL
+    BACNET_APPLICATION_TAG_SHED_LEVEL,
+    /* BACnetAccessRule */
+    BACNET_APPLICATION_TAG_ACCESS_RULE,
+    /* BACnetChannelValue */
+    BACNET_APPLICATION_TAG_CHANNEL_VALUE,
+    /* BACnetLogRecord */
+    BACNET_APPLICATION_TAG_LOG_RECORD
 } BACNET_APPLICATION_TAG;
 
 /* note: these are not the real values, */
@@ -1791,6 +1808,21 @@ typedef enum {
     LOGGING_TYPE_COV = 1,
     LOGGING_TYPE_TRIGGERED = 2
 } BACNET_LOGGING_TYPE;
+
+typedef enum BACnetLogDatum {
+    BACNET_LOG_DATUM_STATUS = 0,
+    BACNET_LOG_DATUM_BOOLEAN = 1,
+    BACNET_LOG_DATUM_REAL = 2,
+    BACNET_LOG_DATUM_ENUMERATED = 3,
+    BACNET_LOG_DATUM_UNSIGNED = 4,
+    BACNET_LOG_DATUM_SIGNED = 5,
+    BACNET_LOG_DATUM_BITSTRING = 6,
+    BACNET_LOG_DATUM_NULL = 7,
+    BACNET_LOG_DATUM_FAILURE = 8,
+    BACNET_LOG_DATUM_TIME_CHANGE = 9,
+    BACNET_LOG_DATUM_ANY = 10,
+    BACNET_LOG_DATUM_MAX = 11
+} BACNET_LOG_DATUM;
 
 typedef enum {
     ACKNOWLEDGMENT_FILTER_ALL = 0,
@@ -2168,6 +2200,10 @@ typedef enum {
        compilers will allocate adequate sized datatype for enum
        which is used to store decoding */
     ERROR_CODE_PROPRIETARY_FIRST = 256,
+    /* some error codes for internal stack usage */
+    ERROR_CODE_ = 65535,
+    ERROR_CODE_DISCARD = 65534,
+    ERROR_CODE_DEFAULT = 65535,
     ERROR_CODE_PROPRIETARY_LAST = 65535
 } BACNET_ERROR_CODE;
 
@@ -2588,6 +2624,10 @@ typedef enum {
     PORT_TYPE_NON_BACNET = 8,
     PORT_TYPE_BIP6 = 9,
     PORT_TYPE_SERIAL = 10,
+    /*  For BACnet/SC network port implementations with
+        a Protocol_Revision 24 and higher, BACnet/SC network ports shall be
+        represented by a Network Port object at the BACNET_APPLICATION
+        protocol level with network type of SECURE_CONNECT. */
     PORT_TYPE_BSC = 11,
     /* Enumerated values 0-63 are reserved for definition by ASHRAE.
        Enumerated values 64-255 may be used by others subject to the
@@ -2988,5 +3028,21 @@ typedef enum BACnetAuditOperation {
     AUDIT_OPERATION_PROPRIETARY_MIN = 32,
     AUDIT_OPERATION_PROPRIETARY_MAX = 63
 } BACNET_AUDIT_OPERATION;
+
+typedef enum BACnetSCHubConnectorState {
+    /* FIXME: prefix with typedef name as much as possible */
+    BACNET_SC_HUB_CONNECTOR_STATE_NO_HUB_CONNECTION = 0,
+    BACNET_SC_HUB_CONNECTOR_STATE_CONNECTED_TO_PRIMARY = 1,
+    BACNET_SC_HUB_CONNECTOR_STATE_CONNECTED_TO_FAILOVER = 2,
+    BACNET_SC_HUB_CONNECTOR_STATE_MAX = 3
+} BACNET_SC_HUB_CONNECTOR_STATE;
+
+typedef enum BACnetSCConnectionState {
+    BACNET_SC_CONNECTION_STATE_NOT_CONNECTED = 0,
+    BACNET_SC_CONNECTION_STATE_CONNECTED = 1,
+    BACNET_SC_CONNECTION_STATE_DISCONNECTED_WITH_ERRORS = 2,
+    BACNET_SC_CONNECTION_STATE_FAILED_TO_CONNECT = 3,
+    BACNET_SC_CONNECTION_STATE_MAX = 4
+} BACNET_SC_CONNECTION_STATE;
 
 #endif /* end of BACENUM_H */
