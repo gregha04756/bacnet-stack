@@ -211,18 +211,32 @@ static void bacnet_read_property_ack_process(
     BACNET_ARRAY_INDEX array_index = 0;
 
     if (rp_data) {
+        value = &Target_Decoded_Property_Value;
+        /* check for property error */
         if (rp_data->error_code != ERROR_CODE_SUCCESS) {
             if (bacnet_read_write_value_callback) {
                 bacnet_read_write_value_callback(device_id, rp_data, NULL);
             }
+            return;
+        }
+        /* check for empty list */
+        if (rp_data->application_data_len == 0) {
+            bacapp_value_list_init(value, 1);
+            value->tag = BACNET_APPLICATION_TAG_EMPTYLIST;
+            rp_data->error_class = ERROR_CLASS_SERVICES;
+            rp_data->error_code = ERROR_CODE_SUCCESS;
+            if (bacnet_read_write_value_callback) {
+                bacnet_read_write_value_callback(device_id, rp_data, value);
+            }
+            return;
         }
         apdu = rp_data->application_data;
         apdu_len = rp_data->application_data_len;
         while (apdu_len) {
-            value = &Target_Decoded_Property_Value;
-            len = bacapp_decode_known_property(
+            bacapp_value_list_init(value, 1);
+            len = bacapp_decode_known_array_property(
                 apdu, (unsigned)apdu_len, value, rp_data->object_type,
-                rp_data->object_property);
+                rp_data->object_property, rp_data->array_index);
             if (len > 0) {
                 if ((len < apdu_len) &&
                     (rp_data->array_index == BACNET_ARRAY_ALL)) {
@@ -251,7 +265,11 @@ static void bacnet_read_property_ack_process(
                 }
             } else {
                 rp_data->error_class = ERROR_CLASS_SERVICES;
-                rp_data->error_code = ERROR_CODE_SUCCESS;
+                if (len < 0) {
+                    rp_data->error_code = ERROR_CODE_OTHER;
+                } else {
+                    rp_data->error_code = ERROR_CODE_SUCCESS;
+                }
                 if (bacnet_read_write_value_callback) {
                     bacnet_read_write_value_callback(device_id, rp_data, NULL);
                 }
@@ -878,9 +896,10 @@ uint16_t bacnet_read_write_vendor_id_filter(void)
  */
 void bacnet_read_write_init(void)
 {
-    Ringbuf_Init(
+    Ringbuf_Initialize(
         &Target_Data_Queue, (uint8_t *)&Target_Data_Buffer,
-        TARGET_DATA_QUEUE_SIZE, TARGET_DATA_QUEUE_COUNT);
+        sizeof(Target_Data_Buffer), TARGET_DATA_QUEUE_SIZE,
+        TARGET_DATA_QUEUE_COUNT);
     /* handle i-am to support binding to other devices */
     apdu_set_unconfirmed_handler(SERVICE_UNCONFIRMED_I_AM, My_I_Am_Bind);
     /* handle the data coming back from confirmed requests */

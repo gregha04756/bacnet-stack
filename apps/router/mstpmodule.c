@@ -14,15 +14,7 @@
 #include <sys/ipc.h>
 #include "mstpmodule.h"
 #include "bacnet/bacint.h"
-#include "dlmstp_linux.h"
-#include <termios.h>
-
-#define MSTP_THREAD_PRINT_ENABLED
-#ifdef MSTP_THREAD_PRINT_ENABLED
-#define mstp_thread_debug(...) fprintf(stderr, __VA_ARGS__)
-#else
-#define mstp_thread_debug(...)
-#endif
+#include "dlmstp_port.h"
 
 void *dl_mstp_thread(void *pArgs)
 {
@@ -34,7 +26,6 @@ void *dl_mstp_thread(void *pArgs)
 
     shared_port_data.MSTP_Packets = 0;
     shared_port_data.RS485_Handle = -1;
-    shared_port_data.RS485_Baud = B38400;
     shared_port_data.RS485MOD = 0;
 
     switch (port->params.mstp_params.databits) {

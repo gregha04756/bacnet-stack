@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
 /* BACnet Stack defines - first */
 #include "bacnet/bacdef.h"
 /* BACnet Stack API */
@@ -29,6 +28,7 @@
 #include "bacnet/basic/tsm/tsm.h"
 #include "bacnet/basic/object/device.h"
 #include "bacnet/basic/services.h"
+#include "bacnet/basic/sys/debug.h"
 #include "bacnet/datalink/datalink.h"
 
 #ifndef MAX_COV_PROPERTIES
@@ -271,34 +271,47 @@ static int cov_encode_subscription(
  *  Invoked by a request to read the Device object's
  * PROP_ACTIVE_COV_SUBSCRIPTIONS. Loops through the list of COV Subscriptions,
  * and, for each valid one, adds its description to the APDU.
- *  @note This function needs some work to better handle buffer overruns.
  *  @param apdu [out] Buffer in which the APDU contents are built.
  *  @param max_apdu [in] Max length of the APDU buffer.
  *  @return How many bytes were encoded in the buffer, or -2 if the response
  *          would not fit within the buffer.
  */
+/* Maximume length for an encoded COV subscription  - 31 bytes for BACNET IP6
+ * 35 bytes for IPv4 (longest MAC) with the maximum length
+ * of PID (5 bytes) and lets round it up to the 64bit machine word
+ * alignment */
+#define MAX_COV_SUB_SIZE (40)
 int handler_cov_encode_subscriptions(uint8_t *apdu, int max_apdu)
 {
-    int len = 0;
-    int apdu_len = 0;
-    unsigned index = 0;
-
     if (apdu) {
+        uint8_t cov_sub[MAX_COV_SUB_SIZE] = {
+            0,
+        };
+        unsigned index = 0;
+        int apdu_len = 0;
+
         for (index = 0; index < MAX_COV_SUBCRIPTIONS; index++) {
             if (COV_Subscriptions[index].flag.valid) {
-                len = cov_encode_subscription(
-                    &apdu[apdu_len], max_apdu - apdu_len,
+                /* Lets encode a COV subscription into an intermediate buffer
+                 * that can hold it */
+                int len = cov_encode_subscription(
+                    &cov_sub[0], max_apdu - apdu_len,
                     &COV_Subscriptions[index]);
-                apdu_len += len;
-                /* TODO: too late here to notice that we overran the buffer */
-                if (apdu_len > max_apdu) {
+
+                if ((apdu_len + len) > max_apdu) {
                     return -2;
                 }
+
+                /* Lets copy if and only if it fits in the buffer */
+                memcpy(&apdu[apdu_len], cov_sub, len);
+                apdu_len += len;
             }
         }
+
+        return apdu_len;
     }
 
-    return apdu_len;
+    return 0;
 }
 
 /** Handler to initialize the COV list, clearing and disabling each entry.
@@ -393,9 +406,9 @@ static bool cov_list_subscribe(
             *error_code = ERROR_CODE_NO_SPACE_TO_ADD_LIST_ELEMENT;
             found = false;
         } else {
-            COV_Subscriptions[index].dest_index = addr_add_ret;
             index = first_invalid_index;
             found = true;
+            COV_Subscriptions[index].dest_index = addr_add_ret;
             COV_Subscriptions[index].flag.valid = true;
             COV_Subscriptions[index].monitoredObjectIdentifier.type =
                 cov_data->monitoredObjectIdentifier.type;
@@ -459,7 +472,9 @@ static bool cov_send_request(
         return status;
     }
     datalink_get_my_address(&my_address);
-    npdu_encode_npdu_data(&npdu_data, false, MESSAGE_PRIORITY_NORMAL);
+    npdu_encode_npdu_data(
+        &npdu_data, cov_subscription->flag.issueConfirmedNotifications,
+        MESSAGE_PRIORITY_NORMAL);
     pdu_len = npdu_encode_pdu(
         &Handler_Transmit_Buffer[0], dest, &my_address, &npdu_data);
     /* load the COV data structure for outgoing message */
@@ -473,7 +488,6 @@ static bool cov_send_request(
     cov_data.timeRemaining = cov_subscription->lifetime;
     cov_data.listOfValues = value_list;
     if (cov_subscription->flag.issueConfirmedNotifications) {
-        npdu_data.data_expecting_reply = true;
         invoke_id = tsm_next_free_invokeID();
         if (invoke_id) {
             cov_subscription->invokeID = invoke_id;
@@ -807,24 +821,25 @@ void handler_cov_subscribe(
     cov_data.error_code = ERROR_CODE_ABORT_SEGMENTATION_NOT_SUPPORTED;
     /* encode the NPDU portion of the packet */
     datalink_get_my_address(&my_address);
-    npdu_encode_npdu_data(&npdu_data, false, MESSAGE_PRIORITY_NORMAL);
+    npdu_encode_npdu_data(&npdu_data, false, service_data->priority);
     npdu_len = npdu_encode_pdu(
         &Handler_Transmit_Buffer[0], src, &my_address, &npdu_data);
-    if (service_data->segmented_message) {
+    if (service_len == 0) {
+        len = BACNET_STATUS_REJECT;
+        cov_data.error_code = ERROR_CODE_REJECT_MISSING_REQUIRED_PARAMETER;
+        debug_print("CCOV: Missing Required Parameter. Sending Reject!\n");
+        error = true;
+    } else if (service_data->segmented_message) {
         /* we don't support segmentation - send an abort */
         len = BACNET_STATUS_ABORT;
-#if PRINT_ENABLED
-        fprintf(stderr, "SubscribeCOV: Segmented message.  Sending Abort!\n");
-#endif
+        debug_print("SubscribeCOV: Segmented message.  Sending Abort!\n");
         error = true;
     } else {
         len = cov_subscribe_decode_service_request(
             service_request, service_len, &cov_data);
-#if PRINT_ENABLED
         if (len <= 0) {
-            fprintf(stderr, "SubscribeCOV: Unable to decode Request!\n");
+            debug_print("SubscribeCOV: Unable to decode Request!\n");
         }
-#endif
         if (len < 0) {
             error = true;
         } else {
@@ -836,54 +851,39 @@ void handler_cov_subscribe(
                 apdu_len = encode_simple_ack(
                     &Handler_Transmit_Buffer[npdu_len], service_data->invoke_id,
                     SERVICE_CONFIRMED_SUBSCRIBE_COV);
-#if PRINT_ENABLED
-                fprintf(stderr, "SubscribeCOV: Sending Simple Ack!\n");
-#endif
+                debug_print("SubscribeCOV: Sending Simple Ack!\n");
             } else {
                 len = BACNET_STATUS_ERROR;
                 error = true;
-#if PRINT_ENABLED
-                fprintf(stderr, "SubscribeCOV: Sending Error!\n");
-#endif
+                debug_print("SubscribeCOV: Sending Error!\n");
             }
         }
     }
-
     /* Error? */
     if (error) {
         if (len == BACNET_STATUS_ABORT) {
             apdu_len = abort_encode_apdu(
                 &Handler_Transmit_Buffer[npdu_len], service_data->invoke_id,
                 abort_convert_error_code(cov_data.error_code), true);
-#if PRINT_ENABLED
-            fprintf(stderr, "SubscribeCOV: Sending Abort!\n");
-#endif
+            debug_print("SubscribeCOV: Sending Abort!\n");
         } else if (len == BACNET_STATUS_ERROR) {
             apdu_len = bacerror_encode_apdu(
                 &Handler_Transmit_Buffer[npdu_len], service_data->invoke_id,
                 SERVICE_CONFIRMED_SUBSCRIBE_COV, cov_data.error_class,
                 cov_data.error_code);
-#if PRINT_ENABLED
-            fprintf(stderr, "SubscribeCOV: Sending Error!\n");
-#endif
+            debug_print("SubscribeCOV: Sending Error!\n");
         } else if (len == BACNET_STATUS_REJECT) {
             apdu_len = reject_encode_apdu(
                 &Handler_Transmit_Buffer[npdu_len], service_data->invoke_id,
                 reject_convert_error_code(cov_data.error_code));
-#if PRINT_ENABLED
-            fprintf(stderr, "SubscribeCOV: Sending Reject!\n");
-#endif
+            debug_print("SubscribeCOV: Sending Reject!\n");
         }
     }
     pdu_len = npdu_len + apdu_len;
     bytes_sent = datalink_send_pdu(
         src, &npdu_data, &Handler_Transmit_Buffer[0], pdu_len);
     if (bytes_sent <= 0) {
-#if PRINT_ENABLED
-        fprintf(
-            stderr, "SubscribeCOV: Failed to send PDU (%s)!\n",
-            strerror(errno));
-#endif
+        debug_perror("SubscribeCOV: Failed to send PDU");
     }
 
     return;

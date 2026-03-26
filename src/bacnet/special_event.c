@@ -228,7 +228,7 @@ int bacnet_special_event_context_decode(
 bool bacnet_special_event_same(
     const BACNET_SPECIAL_EVENT *value1, const BACNET_SPECIAL_EVENT *value2)
 {
-    BACNET_APPLICATION_DATA_VALUE adv1, adv2;
+    BACNET_APPLICATION_DATA_VALUE adv1 = { 0 }, adv2 = { 0 };
     const BACNET_TIME_VALUE *tv1, *tv2;
     int ti;
 
@@ -262,6 +262,24 @@ bool bacnet_special_event_same(
             return false;
         }
     }
+
+    return true;
+}
+
+/**
+ * @brief Compare the BACnetSpecialEvent complex data
+ * @param value1 - BACNET_SPECIAL_EVENT structure
+ * @param value2 - BACNET_SPECIAL_EVENT structure
+ * @return true if the same
+ */
+bool bacnet_special_event_copy(
+    BACNET_SPECIAL_EVENT *dest, const BACNET_SPECIAL_EVENT *src)
+{
+    if (!dest || !src) {
+        return false;
+    }
+
+    memcpy(dest, src, sizeof(BACNET_SPECIAL_EVENT));
 
     return true;
 }

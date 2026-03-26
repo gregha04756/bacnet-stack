@@ -76,6 +76,7 @@
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\objects.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\osv.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\piv.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\basic\object\program.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\schedule.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\structured_view.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\object\trendlog.c" />
@@ -148,6 +149,7 @@
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\filename.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\keylist.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\linear.c" />
+    <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\lighting_command.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\mstimer.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\ringbuf.c" />
     <ClCompile Include="..\..\..\..\src\bacnet\basic\sys\sbuf.c" />

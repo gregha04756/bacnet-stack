@@ -40,7 +40,7 @@
 #include <sys/select.h>
 #include <sys/time.h>
 
-#include "dlmstp_bsd.h"
+#include "dlmstp_port.h"
 
 #if defined(__APPLE__) || defined(__darwin__)
 #include <IOKit/serial/ioss.h>
@@ -118,7 +118,8 @@ static void closeSerialPort(int fileDescriptor);
 void RS485_Set_Interface(char *ifname)
 {
     /* note: expects a constant char, or char from the heap */
-    if (ifname) {
+    if (ifname && ifname != NULL) {
+        printf("### RS485_Set_Interface %s\n", ifname);
         RS485_Port_Name = ifname;
     }
 }
@@ -399,7 +400,7 @@ void RS485_Send_Frame(
     const uint8_t *buffer, /* frame to send (up to 501 bytes of data) */
     uint16_t nbytes)
 { /* number of bytes of data (up to 501) */
-    uint32_t turnaround_time = Tturnaround * 1000;
+    uint32_t turnaround_time_usec = Tturnaround * 1000000UL;
     uint32_t baud;
     ssize_t written = 0;
     int greska;
@@ -412,7 +413,7 @@ void RS485_Send_Frame(
         baud = RS485_Get_Baud_Rate();
         /* sleeping for turnaround time is necessary to give other devices
            time to change from sending to receiving state. */
-        usleep(turnaround_time / baud);
+        usleep(turnaround_time_usec / baud);
         /*
            On  success,  the  number of bytes written are returned (zero
            indicates nothing was written).  On error, -1  is  returned,  and
@@ -438,7 +439,7 @@ void RS485_Send_Frame(
         baud = RS485_Get_Port_Baud_Rate(mstp_port);
         /* sleeping for turnaround time is necessary to give other devices
            time to change from sending to receiving state. */
-        usleep(turnaround_time / baud);
+        usleep(turnaround_time_usec / baud);
         /*
            On  success,  the  number of bytes written are returned (zero
            indicates nothing was written).  On error, -1  is  returned,  and
@@ -647,6 +648,25 @@ static int openSerialPort(const char *const bsdPath)
     int fileDescriptor = -1;
     int handshake;
     struct termios options;
+#if defined(__APPLE__) || defined(__darwin__)
+
+    /* The IOSSIOSPEED ioctl can be used to set arbitrary baud rates other than
+     * those specified by POSIX. The driver for the underlying serial hardware
+     * ultimately determines which baud rates can be used. This ioctl sets both
+     * the input and output speed. */
+
+    speed_t speed = RS485_Get_Baud_Rate();
+
+    /* Set the receive latency in microseconds. Serial drivers use this value to
+       determine how often to dequeue characters received by the hardware. Most
+       applications don't need to set this value: if an app reads lines of
+       characters, the app can't do anything until the line termination
+       character has been received anyway. The most common applications which
+       are sensitive to read latency are MIDI and IrDA applications. */
+
+    unsigned long mics = 1UL;
+
+#endif
 
     /* Open the serial port read/write, with no controlling terminal, and don't
        wait for a connection. The O_NONBLOCK flag also causes subsequent I/O on
@@ -726,7 +746,6 @@ static int openSerialPort(const char *const bsdPath)
      * ultimately determines which baud rates can be used. This ioctl sets both
      * the input and output speed. */
 
-    speed_t speed = RS485_Get_Baud_Rate();
     if (ioctl(fileDescriptor, IOSSIOSPEED, &speed) == -1) {
         printf("Error calling ioctl(..., IOSSIOSPEED, ...) %s - %s(%d).\n",
             bsdPath, strerror(errno), errno);
@@ -785,7 +804,6 @@ static int openSerialPort(const char *const bsdPath)
     printf("Handshake lines currently set to %d\n", handshake);
 
 #if defined(__APPLE__) || defined(__darwin__)
-    unsigned long mics = 1UL;
 
     /* Set the receive latency in microseconds. Serial drivers use this value to
        determine how often to dequeue characters received by the hardware. Most

@@ -36,11 +36,13 @@ add_executable(${PROJECT_NAME}
     # File(s) under test
     ${SRC_DIR}/bacnet/basic/object/ai.c
     # Support files and stubs (pathname alphabetical)
+    ${SRC_DIR}/bacnet/access_rule.c
     ${SRC_DIR}/bacnet/bacaction.c
     ${SRC_DIR}/bacnet/bacaddr.c
     ${SRC_DIR}/bacnet/bacdcode.c
     ${SRC_DIR}/bacnet/bacdest.c
     ${SRC_DIR}/bacnet/bacint.c
+    ${SRC_DIR}/bacnet/baclog.c
     ${SRC_DIR}/bacnet/bacreal.c
     ${SRC_DIR}/bacnet/bacstr.c
     ${SRC_DIR}/bacnet/bactext.c
@@ -60,6 +62,8 @@ add_executable(${PROJECT_NAME}
     ${SRC_DIR}/bacnet/dailyschedule.c
     ${SRC_DIR}/bacnet/calendar_entry.c
     ${SRC_DIR}/bacnet/special_event.c
+    ${SRC_DIR}/bacnet/channel_value.c
+    ${SRC_DIR}/bacnet/secure_connect.c
     ${SRC_DIR}/bacnet/basic/sys/bigend.c
     ${SRC_DIR}/bacnet/basic/sys/days.c
     ${SRC_DIR}/bacnet/basic/sys/debug.c
