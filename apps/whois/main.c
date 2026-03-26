@@ -34,6 +34,8 @@
 #include "bacnet/datalink/dlenv.h"
 #include "bacport.h"
 
+int bacwi_main(int argc, char *argv[]);
+
 /* buffer used for receive */
 static uint8_t Rx_Buf[MAX_MPDU] = { 0 };
 
@@ -333,7 +335,7 @@ static void print_help(const char *filename)
         filename);
 }
 
-int main(int argc, char *argv[])
+int bacwi_main(int argc, char *argv[])
 {
     BACNET_ADDRESS src = { 0 }; /* address where message came from */
     uint16_t pdu_len = 0;

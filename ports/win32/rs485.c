@@ -141,7 +141,7 @@ void RS485_Print_Error(void)
         FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL,
         GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPTSTR)&lpMsgBuf, 0, NULL);
-    MessageBox(NULL, lpMsgBuf, "GetLastError", MB_OK | MB_ICONINFORMATION);
+    MessageBox(NULL, lpMsgBuf, _T("GetLastError"), MB_OK | MB_ICONINFORMATION);
     LocalFree(lpMsgBuf);
 
     return;
